@@ -5,7 +5,7 @@ import gudhi as gd
 from prettytable import PrettyTable
 from make_torus import *
     
-def plot_witness_edges(points, simplex_tree, name, max_dim=1):
+def plot_witness_edges(points, landmarks, simplex_tree, name, max_dim=1):
     """
     Plots the witness complex
     
@@ -17,8 +17,9 @@ def plot_witness_edges(points, simplex_tree, name, max_dim=1):
     fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(111, projection='3d')
 
-    # Points
+    # Points... ? 
     ax.scatter(points[:,0], points[:,1], points[:,2], s=5, alpha=0.3)
+    ax.scatter(landmarks[:,0], landmarks[:,1], landmarks[:,2], c="red", alpha= 0.5)
 
     # Edges
     for simplex in simplex_tree.get_skeleton(max_dim):
@@ -43,14 +44,22 @@ def witness_complex(x, y, z, name):
              plot.........(Figures) persistence diagram and plot of complex
     """
     # Formatting data
-    n_landmarks = 200
+    n_landmarks = 50
     points = np.vstack([x,y,z]).T
+    
+    # Prevent clustering: use equispaced landmarks
+    # use approximate period (build for periodic or semiperiodic orbit )
     landmarks = points[np.random.choice(points.shape[0], n_landmarks, replace = False)]
+    witnesses = []
+    for point in points:
+        if point not in landmarks: witnesses.append(point)
+
+    # plot witnesses and landmarks    
     
     # Building complex and simplex tree
     # Here, the landmarks are a subset of the witnesses
     print("Building Witness Complex")
-    WC = gd.EuclideanWitnessComplex(points, landmarks)
+    WC = gd.EuclideanWitnessComplex(witnesses, landmarks)
     simplex_tree = WC.create_simplex_tree(max_alpha_square = 100.0, limit_dimension=3)
     
     # Persistent Homology
@@ -62,7 +71,7 @@ def witness_complex(x, y, z, name):
     plt.savefig(f"Witness_Persistence_{name}")
     plt.close() 
     
-    plot_witness_edges(points, simplex_tree, name, max_dim = 1)
+    plot_witness_edges(points, landmarks, simplex_tree, name, max_dim = 1)
     
     return simplex_tree.dimension(), simplex_tree.num_vertices(), simplex_tree.num_simplices(), simplex_tree.betti_numbers()
  
@@ -75,10 +84,12 @@ def classical_vs_wiggly():
     q = 1
     
     # 10,000 looks like a nice orbit but it makes computer explodes
-    n = 500
+    # TODO: how does number of simplices increase with number of landmarks? exp? !?
+    n = 300
     
     # Wiggle parameters
-    a = 0.3
+    # Try alpha >= 1 and note betti numbers
+    a = 3
     k = 5
     
     x_c, y_c, z_c, t_c = make_torus(R, r, w1, p, q, 10e-3, n, "classical", True)
