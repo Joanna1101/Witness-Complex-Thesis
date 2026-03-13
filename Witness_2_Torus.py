@@ -4,33 +4,75 @@ import numpy as np
 import gudhi as gd  
 from prettytable import PrettyTable
 from make_torus import *
+import itertools
     
-def plot_witness_edges(points, landmarks, simplex_tree, name, max_dim=1):
+def plot_witness_edges(witnesses, landmarks, simplex_tree, name, max_dim=1):
     """
     Plots the witness complex
     
-    TODO:     
-    # try plotting different alphas with their persistence diagrams
-    # try different shapes, frequency ratios
-    # look at rips complex
+    TODO: Progression of epsilons: as epsilon increases more things get connected
     """
     fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(111, projection='3d')
 
-    # Points... ? 
-    ax.scatter(points[:,0], points[:,1], points[:,2], s=5, alpha=0.3)
-    ax.scatter(landmarks[:,0], landmarks[:,1], landmarks[:,2], c="red", alpha= 0.5)
+    ax.scatter(witnesses[:,0], witnesses[:,1], witnesses[:,2], c = "blue", s=5, alpha=0.3, label = "Witnesses")
+    ax.scatter(landmarks[:,0], landmarks[:,1], landmarks[:,2], c = "red", s=10, alpha= 0.5, label = "Landmarks")
 
-    # Edges
+    # Edges BETWEEN LANDMARKS
     for simplex in simplex_tree.get_skeleton(max_dim):
         if len(simplex[0]) == 2:  
             i, j = simplex[0]
-            p, q = points[i], points[j]
+            p, q = landmarks[i], landmarks[j] 
             ax.plot([p[0], q[0]], [p[1], q[1]], [p[2], q[2]], 'k-', linewidth=0.5, alpha=0.3)
 
     ax.set_box_aspect([1,1,1])
-    plt.savefig(f"Witness_Complex_{name}")
+    ax.legend(loc="upper right")
+    plt.savefig(f"CORRECT_Witness_Complex_{name}")
     plt.close()   
+    
+def landmark_simplex_tree(landmarks, witnesses, max_alpha_square, max_dim = 2, k_nearest = None):
+    """
+    Builds a simplex tree with connections between landmarks not witnesses
+    Inputs:  landmarks...........(np array)
+             witnesses...........(np array)
+             max_alpha_square....(int) distance threshold
+             max_dim.............(int) max simplex dimension
+             k_nearest...........(bool/int) use up to k nearest landmarks
+    Outputs: st..................(simplex tree)
+    """
+    L = len(landmarks)
+    st = gd.SimplexTree()
+
+    # Landmarks first
+    for i in range(L):
+        st.insert([i], filtration=0.0)
+
+    for w in witnesses:
+        # distances from this witness to all landmarks
+        diffs = landmarks - w
+        
+        # euclidean distance
+        d2 = np.linalg.norm(diffs, axis=1)**2
+
+        # Sort by distance
+        order = np.argsort(d2)
+        if k_nearest is not None:
+            order = order[:k_nearest]
+
+        # Distance threshold
+        close = [i for i in order if d2[i] <= max_alpha_square]
+        if len(close) < 2:
+            continue  
+
+        # Simplices for landmarks
+        for dim in range(1, max_dim + 1):
+            for comb in itertools.combinations(close, dim + 1):
+                filt = max(d2[list(comb)])  # Filter based on max squared distance from witness -> verticies
+                st.insert(list(comb), filtration=filt)
+
+    st.initialize_filtration()
+    return st
+    
     
 def witness_complex(x, y, z, name):
     """
@@ -47,20 +89,24 @@ def witness_complex(x, y, z, name):
     n_landmarks = 50
     points = np.vstack([x,y,z]).T
     
-    # Prevent clustering: use equispaced landmarks
-    # use approximate period (build for periodic or semiperiodic orbit )
-    landmarks = points[np.random.choice(points.shape[0], n_landmarks, replace = False)]
-    witnesses = []
-    for point in points:
-        if point not in landmarks: witnesses.append(point)
-
-    # plot witnesses and landmarks    
+    # Equispaced landmarks
+    N = len(points)
+    landmark_is = np.linspace(0, N-1, n_landmarks, dtype = int)
+    landmarks = points[landmark_is]
+    mask = np.ones(N, dtype=bool)
+    mask[landmark_is] = False
+    witnesses = points[mask]
     
     # Building complex and simplex tree
-    # Here, the landmarks are a subset of the witnesses
     print("Building Witness Complex")
-    WC = gd.EuclideanWitnessComplex(witnesses, landmarks)
-    simplex_tree = WC.create_simplex_tree(max_alpha_square = 100.0, limit_dimension=3)
+    # WC = gd.EuclideanWitnessComplex(witnesses, landmarks)
+    
+    # APPARENTLY, the simplex tree builds edges between witnesses 
+    # GUDHI does this because it makes nearest neighbor landmark queries easier
+    # simplex_tree = WC.create_simplex_tree(max_alpha_square = 100.0, limit_dimension=3)
+    
+    # 5 nearest neighbors seems reasonable
+    simplex_tree = landmark_simplex_tree(landmarks, witnesses, 100.0, 2, 5)
     
     # Persistent Homology
     print("Plotting")
@@ -71,7 +117,7 @@ def witness_complex(x, y, z, name):
     plt.savefig(f"Witness_Persistence_{name}")
     plt.close() 
     
-    plot_witness_edges(points, landmarks, simplex_tree, name, max_dim = 1)
+    plot_witness_edges(witnesses, landmarks, simplex_tree, name, max_dim = 1)
     
     return simplex_tree.dimension(), simplex_tree.num_vertices(), simplex_tree.num_simplices(), simplex_tree.betti_numbers()
  
