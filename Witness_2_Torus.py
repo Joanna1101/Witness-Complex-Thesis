@@ -1,11 +1,17 @@
-## Imports
+## Imports ############################################################
+#######################################################################
 import matplotlib.pyplot as plt
 import numpy as np
 import gudhi as gd  
 from prettytable import PrettyTable
 from make_torus import *
 import itertools
+
+
+
     
+## PLOTTING ###########################################################
+#######################################################################
 def plot_witness_edges(witnesses, landmarks, simplex_tree, name, max_dim=1):
     """
     Plots the witness complex
@@ -30,7 +36,12 @@ def plot_witness_edges(witnesses, landmarks, simplex_tree, name, max_dim=1):
     plt.savefig(f"CORRECT_Witness_Complex_{name}")
     plt.close()   
     
-def landmark_simplex_tree(landmarks, witnesses, max_alpha_square, max_dim = 2, k_nearest = None):
+    
+    
+    
+## COMPLEX BUILDING ###################################################
+#######################################################################
+def landmark_simplex_tree(landmarks, witnesses, max_alpha_square, max_dim = 3, k_nearest = None):
     """
     Builds a simplex tree with connections between landmarks not witnesses
     Inputs:  landmarks...........(np array)
@@ -39,6 +50,18 @@ def landmark_simplex_tree(landmarks, witnesses, max_alpha_square, max_dim = 2, k
              max_dim.............(int) max simplex dimension
              k_nearest...........(bool/int) use up to k nearest landmarks
     Outputs: st..................(simplex tree)
+    
+    
+    Just use k nearest? Just use alpha? Epsilon?? How many landmarks necessary to get homology correct? 
+    
+    distance matrix of landmarks and witnesses (euclidean)
+    landmark gets witnessed if [insert method here]
+    linked list of landmarks and their associated witness
+    if 2 landmarks share a witness they get connected in the simplex tree 
+    
+    draw triangle if three edges = clique, easiest 
+    only draw triangle if three landmarks share a single witness btwn them
+    tada witness complex 
     """
     L = len(landmarks)
     st = gd.SimplexTree()
@@ -52,6 +75,7 @@ def landmark_simplex_tree(landmarks, witnesses, max_alpha_square, max_dim = 2, k
         diffs = landmarks - w
         
         # euclidean distance
+        # IOU? 
         d2 = np.linalg.norm(diffs, axis=1)**2
 
         # Sort by distance
@@ -61,6 +85,8 @@ def landmark_simplex_tree(landmarks, witnesses, max_alpha_square, max_dim = 2, k
 
         # Distance threshold
         close = [i for i in order if d2[i] <= max_alpha_square]
+        
+        # If less than 2 witnesses dont witness the landmark
         if len(close) < 2:
             continue  
 
@@ -74,10 +100,11 @@ def landmark_simplex_tree(landmarks, witnesses, max_alpha_square, max_dim = 2, k
     return st
     
     
-def witness_complex(x, y, z, name):
+def witness_complex(x, y, z, alpha, name):
     """
     Constructs the witness complex for x, y, z data
     Inputs:  x, y, z......(List, List, List) torus mapping
+             alpha........(float) max distance parameter
              name.........(String) plot names
     Outputs: dim..........(Int) Dimension of simplex tree
              vertices.....(Int) Vertices in simplex tree
@@ -89,7 +116,7 @@ def witness_complex(x, y, z, name):
     n_landmarks = 50
     points = np.vstack([x,y,z]).T
     
-    # Equispaced landmarks
+    # Equispaced landmarks (in time) (?)
     N = len(points)
     landmark_is = np.linspace(0, N-1, n_landmarks, dtype = int)
     landmarks = points[landmark_is]
@@ -106,7 +133,7 @@ def witness_complex(x, y, z, name):
     # simplex_tree = WC.create_simplex_tree(max_alpha_square = 100.0, limit_dimension=3)
     
     # 5 nearest neighbors seems reasonable
-    simplex_tree = landmark_simplex_tree(landmarks, witnesses, 100.0, 2, 5)
+    simplex_tree = landmark_simplex_tree(landmarks, witnesses, alpha, 2, 5)
     
     # Persistent Homology
     print("Plotting")
@@ -121,6 +148,11 @@ def witness_complex(x, y, z, name):
     
     return simplex_tree.dimension(), simplex_tree.num_vertices(), simplex_tree.num_simplices(), simplex_tree.betti_numbers()
  
+ 
+ 
+ 
+## TESTS ##############################################################
+#######################################################################
 def classical_vs_wiggly():
     # Keep these the same
     R = 15
@@ -141,11 +173,13 @@ def classical_vs_wiggly():
     x_c, y_c, z_c, t_c = make_torus(R, r, w1, p, q, 10e-3, n, "classical", True)
     x_w, y_w, z_w, t_w = make_torus(R, r, w1, p, q, 10e-3, n, "wiggly", True, a, k)
     
+    alpha = 100.0
+    
     print("Constructing Classical Witness Complex")
-    dim_c, vert_c, simplices_c, betti_c = witness_complex(x_c, y_c, z_c, "Classical_Torus.png")
+    dim_c, vert_c, simplices_c, betti_c = witness_complex(x_c, y_c, z_c, alpha, "Classical_Torus.png")
     
     print("Constructing Wiggly Witness Complex")
-    dim_w, vert_w, simplices_w, betti_w = witness_complex(x_w, y_w, z_w, "Wiggly_Torus.png")
+    dim_w, vert_w, simplices_w, betti_w = witness_complex(x_w, y_w, z_w, alpha, "Wiggly_Torus.png")
     
     table = PrettyTable()
     table.field_names = ["Type", "Dimension", "Vertices", "Simplices", "Betti Numbers"]
@@ -153,5 +187,31 @@ def classical_vs_wiggly():
     table.add_row(["Wiggly", dim_w, vert_w, simplices_w, str(betti_w)])
     print(table)
     
+def test_alphas():
+    alphas = [5.0, 20.0, 100.0]
+    
+    # Torus parameters
+    R = 15
+    r = 2
+    w1 = 1
+    p = (1+np.sqrt(5))/2
+    q = 1
+    n = 300  # Number of points
+    
+    x_c, y_c, z_c, t_c = make_torus(R, r, w1, p, q, 10e-3, n, "classical", True)
+    
+    table = PrettyTable()
+    table.field_names = ["alpha", "dim", "vertices", "simplices", "betti"]
+    for alpha in alphas:
+        print(f"Constructing Complex For alpha = {alpha}")
+        dim, vert, simplices, betti = witness_complex(x_c, y_c, z_c, alpha, f"{alpha}_Classical_Torus.png")
+        table.add_row([alpha, dim, vert, simplices, betti])
+
+    print(table)
+
+    
+## MAIN ###############################################################
+#######################################################################
 if __name__ == "__main__":
-    classical_vs_wiggly()
+    # classical_vs_wiggly()
+    test_alphas()

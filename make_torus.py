@@ -59,7 +59,7 @@ def wiggle_torus(R, r, w1, w2, t, a, k, plot = False):
     """
     theta1 = w1*t # Major rotation
     theta2 = w2*t # Minor rotation
-    r_wiggle = r*(1+a*np.sin(k*theta1)) # Radius modulation
+    r_wiggle = r*(1+a*np.sin(k*(theta2))) # Radius modulation
 
     x = (R+r_wiggle*np.cos(theta2))*np.cos(theta1)
     y = (R+r_wiggle*np.cos(theta2))*np.sin(theta1)
@@ -167,6 +167,7 @@ def make_torus(R, r, w1, p, q, eps, samples, type, plot, a=0, k=0):
     if eps == "exact":
         w2 = w1*(p/q)
         t = np.linspace(0, 2*np.pi*10, samples) # 10 loops, 10,000 samples
+        # TODO: put in exact Fraction without limiting denominator, guarantee machine precision
     else:    
         w2 = w1 * (p/q)
         
@@ -191,8 +192,9 @@ def make_torus(R, r, w1, p, q, eps, samples, type, plot, a=0, k=0):
     
     if plot:
         name = f"{type}_eps={eps}_w1={w1:.4f}_w2={w2:.4f}.png"
-        plot_orbit(x, y, z, t, w1, w2, name, "color")
-        
+        plot_orbit(x, y, z, t, w1, w2, name, "black")
+    
+    # TODO: also return T so witness complex can choose equispaced landmarks up to T    
     return x, y, z, t
 
 
@@ -232,11 +234,11 @@ def pi_wiggly_10e6():
     r = 2
     w1 = 1
     q = 1
-    n = 1000
+    n = 10000
     a = 0.3 # amplitude (> 1 causes weird flips)
-    k = 5   # Number of wiggles
+    k = 3   # Number of wiggles
     x1, y1, z1, t1 = make_torus(R, r, w1, np.pi, q, 10e-3, n, "wiggly", True, a, k)
-    
+    # x2, y2, z2, t2 = make_torus(R, r, w1, np.pi, q, 10e-3, n, "classical", True)
     
     
     
