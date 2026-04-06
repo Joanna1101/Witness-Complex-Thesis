@@ -1,5 +1,5 @@
-## Imports ############################################################
-#######################################################################
+## Imports ###################################################################################################################################
+##############################################################################################################################################
 import matplotlib.pyplot as plt
 import numpy as np
 import gudhi as gd  
@@ -10,8 +10,8 @@ import itertools
 
 
     
-## PLOTTING ###########################################################
-#######################################################################
+## PLOTTING ##################################################################################################################################
+##############################################################################################################################################
 def plot_witness_edges(witnesses, landmarks, simplex_tree, name, max_dim=1):
     """
     Plots the witness complex
@@ -39,9 +39,9 @@ def plot_witness_edges(witnesses, landmarks, simplex_tree, name, max_dim=1):
     
     
     
-## COMPLEX BUILDING ###################################################
-#######################################################################
-def landmark_simplex_tree(landmarks, witnesses, max_alpha_square, max_dim = 3, k_nearest = None):
+## COMPLEX BUILDING ##########################################################################################################################
+##############################################################################################################################################
+def build_simplex_tree(landmarks, witnesses, max_alpha_square, max_dim = 3, k_nearest = None):
     """
     Builds a simplex tree with connections between landmarks not witnesses
     Inputs:  landmarks...........(np array)
@@ -75,7 +75,7 @@ def landmark_simplex_tree(landmarks, witnesses, max_alpha_square, max_dim = 3, k
         diffs = landmarks - w
         
         # euclidean distance
-        # IOU? 
+        # IOU? other metrics here? 
         d2 = np.linalg.norm(diffs, axis=1)**2
 
         # Sort by distance
@@ -132,8 +132,8 @@ def witness_complex(x, y, z, alpha, name):
     # GUDHI does this because it makes nearest neighbor landmark queries easier
     # simplex_tree = WC.create_simplex_tree(max_alpha_square = 100.0, limit_dimension=3)
     
-    # 5 nearest neighbors seems reasonable
-    simplex_tree = landmark_simplex_tree(landmarks, witnesses, alpha, 2, 5)
+    # 5 nearest neighbors seems reasonable?
+    simplex_tree = build_simplex_tree(landmarks, witnesses, alpha, 2, 5)
     
     # Persistent Homology
     print("Plotting")
@@ -151,8 +151,8 @@ def witness_complex(x, y, z, alpha, name):
  
  
  
-## TESTS ##############################################################
-#######################################################################
+## TESTS #####################################################################################################################################
+##############################################################################################################################################
 def classical_vs_wiggly():
     # Keep these the same
     R = 15
@@ -210,8 +210,8 @@ def test_alphas():
     print(table)
 
     
-## MAIN ###############################################################
-#######################################################################
+## MAIN ######################################################################################################################################
+##############################################################################################################################################
 if __name__ == "__main__":
     # classical_vs_wiggly()
     test_alphas()
