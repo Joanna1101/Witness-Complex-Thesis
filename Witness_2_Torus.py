@@ -164,7 +164,7 @@ def desilva_carlsson_simplex_tree(landmarks, witnesses, max_dim = 3,):
     
     # Distance Matrix: row = landmark, col = witness
     diffs = landmarks[:, None, :]- witnesses[None, :, :]
-    D = np.linalg.norm(diffs, axis = 2)    
+    D = np.linalg.norm(diffs, axis = 2)    # norms equivalent
     
     st = gd.SimplexTree()
     
@@ -184,6 +184,7 @@ def desilva_carlsson_simplex_tree(landmarks, witnesses, max_dim = 3,):
             
             # Filtration value for simplex 'verts' witnessed by i 
             # is the max distance between a vertex in the simplex and i
+            # different metric maybe 
             filt = float(np.max(D[verts, i]))
             st.insert(verts, filtration = filt)
 

@@ -162,7 +162,7 @@ def make_torus(R, r, w1, p, q, eps, samples, type, plot, a=0, k=0):
             type......(String) mapping type: classical, wiggly
             plot......(Boolean) if true, plots system
             a, k......(Ints) for wiggly torus
-    Outputs: x,y,z....(List, List, List) mapping to R^3
+    Outputs: x,y,z,t....(List, List, List) mapping to R^3 and time
     """
     if eps == "exact":
         w2 = w1*(p/q)
